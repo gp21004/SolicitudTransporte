@@ -10,6 +10,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Servir la aplicación frontend estática construida por Quasar
+app.use(express.static(path.join(__dirname, '../frontend/dist/spa')));
+
 const RUTAS_MANUALES_FILE = path.join(__dirname, 'rutas_manuales.xlsx');
 
 // ================== FUNCIONES ==================
@@ -172,7 +175,12 @@ app.delete('/api/eliminar-ruta/:ruta', (req, res) => {
     }
 });
 
-const PORT = 3000;
+// Redirigir cualquier otra ruta al index.html del frontend (importante para Vue Router)
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/dist/spa/index.html'));
+});
+
+const PORT = process.env.PORT || 80;
 app.listen(PORT, () => {
     console.log(`🚀 Servidor backend corriendo en http://localhost:${PORT}`);
 });

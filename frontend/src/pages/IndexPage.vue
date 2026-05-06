@@ -406,7 +406,7 @@ const limpiarTodosLosSelectores = () => {
 
 const cargarDatosDesdeBackend = async () => {
   try {
-    const respuesta = await axios.get('http://localhost:3000/api/datos')
+    const respuesta = await axios.get('/api/datos')
     
     opciones.destinos_originales = respuesta.data.listaDestinos
     opciones.destinos_disponibles = [...respuesta.data.listaDestinos]
@@ -462,7 +462,7 @@ const agregarRutaManual = async () => {
   guardandoRuta.value = true
   
   try {
-    const response = await axios.post('http://localhost:3000/api/guardar-ruta', {
+    const response = await axios.post('/api/guardar-ruta', {
       ruta: nuevaRuta.value.trim()
     })
     
@@ -505,7 +505,7 @@ const eliminarRuta = (ruta) => {
   }).onOk(async () => {
     eliminandoRuta.value = ruta
     try {
-      await axios.delete(`http://localhost:3000/api/eliminar-ruta/${encodeURIComponent(ruta)}`)
+      await axios.delete(`/api/eliminar-ruta/${encodeURIComponent(ruta)}`)
       
       // Actualizar listas locales
       opciones.rutas_manuales_originales = opciones.rutas_manuales_originales.filter(r => r !== ruta)
@@ -553,7 +553,7 @@ const generarDocumento = async () => {
     const todos_destinos = [...(formulario.destinos_ce || []), ...(formulario.sedes || []), ...(formulario.rutas_extra || [])]
     const payload = { ...formulario, destinos: todos_destinos }
 
-    const respuesta = await axios.post('http://localhost:3000/api/generar', payload, {
+    const respuesta = await axios.post('/api/generar', payload, {
       responseType: 'blob' 
     })
 
