@@ -176,7 +176,7 @@ app.delete('/api/eliminar-ruta/:ruta', (req, res) => {
 });
 
 // Redirigir cualquier otra ruta al index.html del frontend (importante para Vue Router)
-app.get('*', (req, res) => {
+app.get(/.*/, (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/dist/spa/index.html'));
 });
 
