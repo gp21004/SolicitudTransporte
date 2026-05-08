@@ -28,12 +28,18 @@
         <div class="col-12 col-md-6">
           <q-select 
             v-model="formulario.mision" 
-            :options="misiones_fijas" 
+            :options="opciones_mision" 
             label="Detalle de Misión" 
             outlined clearable 
+            use-input
+            fill-input
+            hide-selected
+            new-value-mode="add-unique"
+            @filter="filtrarMisiones"
             @update:model-value="limpiarError('mision')"
             :error="errores.mision"
-            error-message="Seleccione una misión"
+            error-message="Seleccione o escriba una misión (Presione Enter)"
+            hint="Puede escribir una misión diferente y presionar Enter"
           />
         </div>
       </div>
@@ -51,10 +57,14 @@
             use-input @filter="filtrarDestinos"
             @update:model-value="() => { limpiarError('destinos'); actualizarListaDestinos(); }"
             :error="errores.destinos"
+            hide-dropdown-icon
+            hint="Escribe para buscar el centro escolar"
           >
-            <template v-if="opciones.destinos_disponibles.length === 0 && (formulario.destinos_ce || []).length > 0" v-slot:option>
+            <template v-slot:no-option>
               <q-item>
-                <q-item-section>No hay más destinos disponibles</q-item-section>
+                <q-item-section class="text-grey">
+                  {{ textoBusquedaDestinos.length < 2 ? 'Escribe al menos 2 letras para buscar tu centro escolar...' : 'No se encontraron resultados' }}
+                </q-item-section>
               </q-item>
             </template>
           </q-select>
@@ -280,8 +290,31 @@ const misiones_fijas = [
   "ENTREGA DE EQUIPO INFORMATICO", 
   "ENTREGA DE DOCUMENTOS", 
   "MANTENIMIENTO PREVENTIVO DE VEHICULO", 
-  "SOPORTE TÉCNICO MÓVIL A CENTROS ESCOLARES"
+  "SOPORTE TÉCNICO MÓVIL A CENTROS ESCOLARES",
+  "TRASLADO DE RECURSOS TECNOLÓGICOS",
+  "SUPERVISIÓN DE SEDE Y RETIRO DE DOCUMENTACIÓN",
+  "SUPERVISIÓN DE SEDE Y ENTREGA DE INSUMOS",
+  "REUNIÓN DE JEFATURA Y COORDINADORES",
+  "ENTREGA DE DOCUMENTACIÓN Y RETIRO DE INSUMOS"
 ]
+
+const opciones_mision = ref([...misiones_fijas])
+
+const filtrarMisiones = (val, update) => {
+  if (val === '') {
+    update(() => {
+      opciones_mision.value = misiones_fijas
+    })
+    return
+  }
+  update(() => {
+    const aguja = val.toLowerCase()
+    opciones_mision.value = misiones_fijas.filter(v => 
+      v.toLowerCase().indexOf(aguja) > -1
+    )
+  })
+}
+
 const montos_fijos = ["Ninguno", "5", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55", "60", "65", "70", "75", "80"]
 
 // Aquí guardamos las listas que vienen del Excel
@@ -377,9 +410,14 @@ const actualizarListaPersonal = () => {
 
 const actualizarListaDestinos = () => {
   const seleccionados = formulario.destinos_ce || []
-  opciones.destinos_disponibles = opciones.destinos_originales.filter(
-    item => !seleccionados.includes(item)
-  )
+  if (textoBusquedaDestinos.value.length < 2) {
+    opciones.destinos_disponibles = []
+  } else {
+    const aguja = textoBusquedaDestinos.value.toLowerCase()
+    opciones.destinos_disponibles = opciones.destinos_originales.filter(
+      item => !seleccionados.includes(item) && item.toLowerCase().indexOf(aguja) > -1
+    )
+  }
 }
 
 const actualizarListaSedes = () => {
@@ -409,7 +447,7 @@ const cargarDatosDesdeBackend = async () => {
     const respuesta = await axios.get('/api/datos')
     
     opciones.destinos_originales = respuesta.data.listaDestinos
-    opciones.destinos_disponibles = [...respuesta.data.listaDestinos]
+    opciones.destinos_disponibles = []
     
     opciones.sedes_originales = respuesta.data.listaSedes
     opciones.sedes_disponibles = [...respuesta.data.listaSedes]
@@ -428,14 +466,16 @@ const cargarDatosDesdeBackend = async () => {
   }
 }
 
+const textoBusquedaDestinos = ref('')
+
 // Filtro buscador para los centros escolares
 const filtrarDestinos = (val, update) => {
   const seleccionados = formulario.destinos_ce || []
-  if (val === '') { 
+  textoBusquedaDestinos.value = val
+  
+  if (val.length < 2) { 
     update(() => { 
-      opciones.destinos_disponibles = opciones.destinos_originales.filter(
-        item => !seleccionados.includes(item)
-      )
+      opciones.destinos_disponibles = []
     })
     return 
   }
