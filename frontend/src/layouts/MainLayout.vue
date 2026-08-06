@@ -6,9 +6,9 @@
         <q-btn flat round dense icon="directions_car" size="lg" class="q-mr-sm" />
         
         <!-- Título principal -->
-        <q-toolbar-title class="text-weight-bold" style="letter-spacing: 0.5px;">
+        <q-toolbar-title class="text-weight-bold non-selectable" style="letter-spacing: 0.5px;">
           MINEDUCYT
-          <span class="text-weight-regular text-subtitle1 q-ml-sm opacity-80 hidden-xs" style="font-size: 0.9em">
+          <span class="text-weight-regular text-subtitle1 q-ml-sm opacity-80 hidden-xs non-selectable" style="font-size: 0.9em">
             | Sistema de Solicitud de Transporte
           </span>
         </q-toolbar-title>

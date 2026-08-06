@@ -6,13 +6,13 @@
           <q-icon name="description" size="32px" />
         </q-avatar>
         <div>
-          <div class="text-h5 text-weight-bold text-dark" style="letter-spacing: -0.5px;">Generar Solicitud de Misión</div>
-          <div class="text-subtitle2 text-grey-7" style="margin-top: -2px;">Complete el formulario para descargar el documento oficial</div>
+          <div class="text-h5 text-weight-bold text-dark non-selectable" style="letter-spacing: -0.5px;">Generar Solicitud de Misión</div>
+          <div class="text-subtitle2 text-grey-7 non-selectable" style="margin-top: -2px;">Complete el formulario para descargar el documento oficial</div>
         </div>
       </div>
 
       <q-card class="q-pa-md q-mb-xl shadow-2 form-card">
-        <div class="text-h6 q-mb-sm">Datos de la Misión</div>
+        <div class="text-h6 q-mb-sm non-selectable">Datos de la Misión</div>
       <div class="row q-col-gutter-md q-mb-md">
         <div class="col-12 col-md-6">
           <q-select 
@@ -46,7 +46,7 @@
 
       <q-separator class="q-my-md" />
 
-      <div class="text-h6 q-mb-sm">📍 Destinos</div>
+      <div class="text-h6 q-mb-sm non-selectable">📍 Destinos</div>
       <div class="row q-col-gutter-md q-mb-md">
         <div class="col-12">
           <q-select 
@@ -201,7 +201,7 @@
 
       <q-separator class="q-my-md" />
 
-      <div class="text-h6 q-mb-sm">🕒 Datos de Salida</div>
+      <div class="text-h6 q-mb-sm non-selectable">🕒 Datos de Salida</div>
       <div class="row q-col-gutter-md q-mb-md">
         <div class="col-12 col-md-6">
           <q-input v-model="formulario.lugar_salida" label="Lugar de salida" outlined />
@@ -230,7 +230,7 @@
 
       <q-separator class="q-my-md" />
 
-      <div class="text-h6 q-mb-sm">🚙 Datos del Vehículo</div>
+      <div class="text-h6 q-mb-sm non-selectable">🚙 Datos del Vehículo</div>
       <div class="row q-col-gutter-md q-mb-lg">
         <div class="col-12 col-md-3">
           <q-input v-model="formulario.clase_vehiculo" label="Clase" outlined />
@@ -272,7 +272,13 @@
           :loading="cargando"
         />
       </div>
-
+       <!-- Firma sutil e incopiable en la parte inferior de la card -->
+      <div 
+        class="text-center q-mt-xl text-caption text-grey-7 non-selectable" 
+        style="letter-spacing: 0.5px; pointer-events: none; opacity: 5.0;"
+      >
+        Sistema desarrollado por Jonathan Gómez
+      </div>
       </q-card>
     </div>
   </q-page>
@@ -292,6 +298,7 @@ const misiones_fijas = [
   "MANTENIMIENTO PREVENTIVO DE VEHICULO", 
   "MANTENIMIENTO CORRECTIVO DE VEHICULO",
   "SOPORTE TÉCNICO MÓVIL A CENTROS ESCOLARES",
+  "SOPORTE TÉCNICO MÓVIL A CENTROS ESCOLARES - SDP",
   "TRASLADO DE RECURSOS TECNOLÓGICOS",
   "SUPERVISIÓN DE SEDE Y RETIRO DE DOCUMENTACIÓN",
   "SUPERVISIÓN DE SEDE Y ENTREGA DE INSUMOS",

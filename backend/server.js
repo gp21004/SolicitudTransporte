@@ -118,15 +118,109 @@ app.post('/api/generar', (req, res) => {
             hours = hours < 10 ? '0' + hours : hours;
             return `${hours}:${minutes} ${ampm}`;
         };
-        const textoDestinos = data.destinos.length > 1
-            ? data.destinos.map(d => `- ${d}`).join('\n')
-            : data.destinos[0];
 
+        // ==========================================
+        // REGLA 1: TELÉFONO SÓLO PARA EL PRIMER NOMBRE Y REDACCIÓN NATURAL
+        // ==========================================
+        const wbPersonal = xlsx.readFile(path.join(__dirname, 'Personal MINEDUCYT.xlsx'));
+        const wsPersonal = wbPersonal.Sheets[wbPersonal.SheetNames[0]];
+        const dataPersonalRaw = xlsx.utils.sheet_to_json(wsPersonal, { header: "A", defval: "" });
+
+        const mapTelefonos = {};
+        dataPersonalRaw.forEach(row => {
+            const telefono = row['C'];
+            if (telefono) {
+                if (row['A']) mapTelefonos[row['A'].toString().trim()] = telefono.toString().trim();
+                if (row['B']) mapTelefonos[row['B'].toString().trim()] = telefono.toString().trim();
+            }
+        });
+
+        // Lógica para formatear con "número de teléfono:" y unir con "y" al final
+        let nombresFormateados = "";
+        if (data.nombres && data.nombres.length > 0) {
+            const primerNombre = data.nombres[0].trim();
+            const telefono = mapTelefonos[primerNombre];
+
+            // Construimos la base del primer nombre
+            let textoPrimerNombre = primerNombre;
+            if (telefono) {
+                textoPrimerNombre += ` número de teléfono: ${telefono}`;
+            }
+
+            // Unimos dependiendo de la cantidad de personas seleccionadas
+            if (data.nombres.length === 1) {
+                nombresFormateados = textoPrimerNombre;
+            } else if (data.nombres.length === 2) {
+                nombresFormateados = `${textoPrimerNombre} y ${data.nombres[1].trim()}`;
+            } else {
+                // Si hay más de 2 personas, usamos comas y la "y" para el último
+                const otrosNombres = data.nombres.slice(1);
+                const ultimoNombre = otrosNombres.pop().trim();
+                nombresFormateados = `${textoPrimerNombre}, ${otrosNombres.map(n => n.trim()).join(', ')} y ${ultimoNombre}`;
+            }
+        }
+        // ==========================================
+        // REGLA 2: SEPARAR DESTINOS PARA TABLA (VERSIÓN MEJORADA)
+        // ==========================================
+        const destinosArray = data.destinos.map(d => {
+            // 1. Limpiamos la palabra literal "undefined" si viene del Excel por celdas vacías
+            let textoLimpio = d ? d.replace(/undefined/g, '').trim() : "";
+            // Limpiamos comas huérfanas que queden al final por espacios en blanco
+            textoLimpio = textoLimpio.replace(/,+$/, '').trim();
+
+            const guionIndex = textoLimpio.indexOf('-');
+
+            // Si tiene guion y lo que está antes es un número (Código C.E.)
+            if (guionIndex > -1 && !isNaN(parseInt(textoLimpio.substring(0, guionIndex)))) {
+                const codigo = textoLimpio.substring(0, guionIndex).trim();
+                let resto = textoLimpio.substring(guionIndex + 1).trim();
+
+                // Separamos por comas y limpiamos los espacios
+                const partes = resto.split(',').map(p => p.trim()).filter(p => p !== "");
+
+                // Si la institución tiene comas en su nombre (ej: "Centro Escolar, Caserio...")
+                // juntamos todas las partes menos las últimas dos (depto y municipio)
+                if (partes.length >= 3) {
+                    const municipio = partes.pop();
+                    const departamento = partes.pop();
+                    const institucion = partes.join(', ');
+                    return { codigo, institucion, departamento, municipio };
+                }
+                // Si faltan datos en el excel (ej. solo vino Institución y Departamento)
+                else if (partes.length === 2) {
+                    return {
+                        codigo,
+                        institucion: partes[0],
+                        departamento: partes[1],
+                        municipio: "-"
+                    };
+                }
+                // Si solo vino la Institución
+                else if (partes.length === 1) {
+                    return {
+                        codigo,
+                        institucion: partes[0],
+                        departamento: "-",
+                        municipio: "-"
+                    };
+                }
+            }
+
+            // Fallback: Si no es un Centro Escolar (Ej: Sedes Enlaces o Rutas manuales)
+            return {
+                codigo: "-",
+                institucion: textoLimpio || "-",
+                departamento: "-",
+                municipio: "-"
+            };
+        });
+
+        // Construimos el contexto que se enviará al Word
         const contexto = {
             fecha_actual: formatFecha(data.fecha_emision),
-            nombres: data.nombres.join(', '),
+            nombres: nombresFormateados, // Reemplazado con nuestra nueva lógica
             detalle_mision: data.mision,
-            destinos: textoDestinos,
+            destinos: destinosArray,     // Reemplazado para que sea un arreglo utilizable en tablas
             lugar_salida: data.lugar_salida,
             fecha_mision: formatFecha(data.fecha_mision),
             hora_salida: formatHora(data.hora_salida),
@@ -143,7 +237,9 @@ app.post('/api/generar', (req, res) => {
             linebreaks: true,
             delimiters: { start: '{{', end: '}}' }
         });
+
         doc.render(contexto);
+
         const buf = doc.getZip().generate({ type: 'nodebuffer', compression: 'DEFLATE' });
         res.setHeader('Content-Disposition', `attachment; filename="${data.placa}-Misión Oficial - ${data.fecha_mision}.docx"`);
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
