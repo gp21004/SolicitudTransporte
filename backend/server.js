@@ -160,61 +160,73 @@ app.post('/api/generar', (req, res) => {
             }
         }
         // ==========================================
-        // REGLA 2: SEPARAR DESTINOS PARA TABLA (VERSIÓN MEJORADA)
+        // REGLA 2: SEPARAR DESTINOS PARA TABLA (SOPORTE PARA SEDES Y OFICINAS)
         // ==========================================
         const destinosArray = data.destinos.map(d => {
-            // 1. Limpiamos la palabra literal "undefined" si viene del Excel por celdas vacías
             let textoLimpio = d ? d.replace(/undefined/g, '').trim() : "";
-            // Limpiamos comas huérfanas que queden al final por espacios en blanco
             textoLimpio = textoLimpio.replace(/,+$/, '').trim();
 
             const guionIndex = textoLimpio.indexOf('-');
 
-            // Si tiene guion y lo que está antes es un número (Código C.E.)
+            // 1. Caso: Centro Escolar (tiene código numérico al inicio seguido de un guión)
             if (guionIndex > -1 && !isNaN(parseInt(textoLimpio.substring(0, guionIndex)))) {
                 const codigo = textoLimpio.substring(0, guionIndex).trim();
                 let resto = textoLimpio.substring(guionIndex + 1).trim();
 
-                // Separamos por comas y limpiamos los espacios
                 const partes = resto.split(',').map(p => p.trim()).filter(p => p !== "");
 
-                // Si la institución tiene comas en su nombre (ej: "Centro Escolar, Caserio...")
-                // juntamos todas las partes menos las últimas dos (depto y municipio)
                 if (partes.length >= 3) {
                     const municipio = partes.pop();
                     const departamento = partes.pop();
                     const institucion = partes.join(', ');
                     return { codigo, institucion, departamento, municipio };
                 }
-                // Si faltan datos en el excel (ej. solo vino Institución y Departamento)
                 else if (partes.length === 2) {
-                    return {
-                        codigo,
-                        institucion: partes[0],
-                        departamento: partes[1],
-                        municipio: "-"
-                    };
+                    return { codigo, institucion: partes[0], departamento: partes[1], municipio: "-" };
                 }
-                // Si solo vino la Institución
                 else if (partes.length === 1) {
+                    return { codigo, institucion: partes[0], departamento: "-", municipio: "-" };
+                }
+            }
+
+            // 2. Caso específico: Sedes Enlaces
+            // El formato que viene del frontend es: "Sede Enlaces Metapán, Santa Ana"
+            if (textoLimpio.toLowerCase().includes("sede enlaces")) {
+                const partes = textoLimpio.split(',');
+                if (partes.length >= 2) {
+                    const departamento = partes[partes.length - 1].trim();
+                    const institucionCompleta = partes[0].trim(); // Toma "Sede Enlaces Metapán"
+
+                    // Extraemos el municipio eliminando la frase "Sede Enlaces"
+                    const municipio = institucionCompleta.replace(/Sede Enlaces/ig, '').trim();
+
                     return {
-                        codigo,
-                        institucion: partes[0],
-                        departamento: "-",
-                        municipio: "-"
+                        codigo: "N/A",
+                        institucion: institucionCompleta,
+                        departamento: departamento,
+                        municipio: municipio || "-"
                     };
                 }
             }
 
-            // Fallback: Si no es un Centro Escolar (Ej: Sedes Enlaces o Rutas manuales)
+            // 3. Caso específico: MINEDUCYT Nivel Central
+            if (textoLimpio.toLowerCase().includes("nivel central")) {
+                return {
+                    codigo: "N/A",
+                    institucion: "MINEDUCYT Nivel Central",
+                    departamento: "San Salvador",
+                    municipio: "San Salvador"
+                };
+            }
+
+            // 4. Fallback General: Rutas manuales u otros destinos sin código
             return {
-                codigo: "-",
+                codigo: "N/A",
                 institucion: textoLimpio || "-",
                 departamento: "-",
                 municipio: "-"
             };
         });
-
         // Construimos el contexto que se enviará al Word
         const contexto = {
             fecha_actual: formatFecha(data.fecha_emision),
