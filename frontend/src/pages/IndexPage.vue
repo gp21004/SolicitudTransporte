@@ -121,27 +121,46 @@
           >
             <q-card flat bordered class="q-pa-md" style="background: #f5f7fa;">
               <!-- Sección para AGREGAR nueva ruta -->
+          <!-- Sección para AGREGAR nueva ruta -->
               <div class="text-subtitle2 text-weight-bold q-mb-sm">
                 <q-icon name="add_circle" size="sm" color="positive" />
                 Agregar nueva ruta
               </div>
-              <div class="row q-col-gutter-md q-mb-lg">
-                <div class="col-12 col-md-8">
+              <div class="row q-col-gutter-md q-mb-md">
+                <div class="col-12 col-md-4">
                   <q-input 
-                    v-model="nuevaRuta" 
-                    label="Escriba la nueva ruta..." 
-                    outlined 
-                    dense
-                    @keyup.enter="agregarRutaManual"
-                    hint="Ejemplo: Centro de Gobierno, San Salvador"
-                    :loading="guardandoRuta"
+                    v-model="nuevaRutaObj.institucion" 
+                    label="Institución *" 
+                    outlined dense
+                    hint="Ej: Centro de Gobierno"
                   >
-                    <template v-slot:prepend>
-                      <q-icon name="edit_location" color="primary" />
-                    </template>
+                    <template v-slot:prepend><q-icon name="domain" color="primary" /></template>
                   </q-input>
                 </div>
-                <div class="col-12 col-md-4 flex flex-center">
+                <div class="col-12 col-md-4">
+                  <q-input 
+                    v-model="nuevaRutaObj.municipio" 
+                    label="Municipio *" 
+                    outlined dense
+                    hint="Ej: San Salvador"
+                  >
+                    <template v-slot:prepend><q-icon name="location_city" color="primary" /></template>
+                  </q-input>
+                </div>
+                <div class="col-12 col-md-4">
+                  <q-input 
+                    v-model="nuevaRutaObj.departamento" 
+                    label="Departamento *" 
+                    outlined dense
+                    hint="Ej: San Salvador"
+                    @keyup.enter="agregarRutaManual"
+                  >
+                    <template v-slot:prepend><q-icon name="map" color="primary" /></template>
+                  </q-input>
+                </div>
+              </div>
+              <div class="row q-mb-lg">
+                <div class="col-12 flex flex-center">
                   <q-btn 
                     color="primary" 
                     icon="save" 
@@ -355,7 +374,11 @@ const formulario = reactive({
   motorista: null
 })
 
-const nuevaRuta = ref('')
+const nuevaRutaObj = reactive({
+  institucion: '',
+  municipio: '',
+  departamento: ''
+})
 const cargando = ref(false)
 const guardandoRuta = ref(false)
 const eliminandoRuta = ref(null)
@@ -497,12 +520,16 @@ const filtrarDestinos = (val, update) => {
 
 // Agregar nueva ruta manual (permanentemente guardada en Excel)
 const agregarRutaManual = async () => {
-  if (nuevaRuta.value.trim() === '') {
-    $q.notify({ type: 'warning', message: 'Por favor escriba una ruta válida', timeout: 2000 })
+  // 1. Validar que los 3 campos estén llenos
+  if (!nuevaRutaObj.institucion.trim() || !nuevaRutaObj.municipio.trim() || !nuevaRutaObj.departamento.trim()) {
+    $q.notify({ type: 'warning', message: 'Por favor llene los 3 campos obligatorios', timeout: 2000 })
     return
   }
   
-  if (opciones.rutas_manuales_originales.includes(nuevaRuta.value.trim())) {
+  // 2. Unimos los campos en el formato: Institución, Departamento, Municipio
+  const rutaFormateada = `${nuevaRutaObj.institucion.trim()}, ${nuevaRutaObj.departamento.trim()}, ${nuevaRutaObj.municipio.trim()}`
+  
+  if (opciones.rutas_manuales_originales.includes(rutaFormateada)) {
     $q.notify({ type: 'warning', message: 'Esta ruta ya existe en el sistema', timeout: 2000 })
     return
   }
@@ -511,17 +538,20 @@ const agregarRutaManual = async () => {
   
   try {
     const response = await axios.post('/api/guardar-ruta', {
-      ruta: nuevaRuta.value.trim()
+      ruta: rutaFormateada
     })
     
     if (response.data.success) {
-      opciones.rutas_manuales_originales.push(nuevaRuta.value.trim())
-      opciones.rutas_manuales_disponibles.push(nuevaRuta.value.trim())
+      opciones.rutas_manuales_originales.push(rutaFormateada)
+      opciones.rutas_manuales_disponibles.push(rutaFormateada)
       
-      formulario.rutas_extra.push(nuevaRuta.value.trim())
+      formulario.rutas_extra.push(rutaFormateada)
       actualizarListaRutasManuales()
       
-      nuevaRuta.value = ''
+      // Limpiar los 3 campos
+      nuevaRutaObj.institucion = ''
+      nuevaRutaObj.municipio = ''
+      nuevaRutaObj.departamento = ''
       
       $q.notify({ 
         type: 'positive', 
@@ -541,7 +571,6 @@ const agregarRutaManual = async () => {
     guardandoRuta.value = false
   }
 }
-
 // Eliminar una ruta manual del Excel (con confirmación)
 const eliminarRuta = (ruta) => {
   $q.dialog({
