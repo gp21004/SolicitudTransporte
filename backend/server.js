@@ -243,8 +243,10 @@ app.post('/api/generar', (req, res) => {
                 departamento: "-",
                 municipio: "-"
             };
-            // Construimos el contexto que se enviará al Word
-            const contexto = {
+        });
+
+        // Construimos el contexto que se enviará al Word
+        const contexto = {
                 fecha_actual: formatFecha(data.fecha_emision),
                 nombres: nombresFormateados, // Reemplazado con nuestra nueva lógica
                 detalle_mision: data.mision,
