@@ -128,10 +128,12 @@ app.post('/api/generar', (req, res) => {
 
         const mapTelefonos = {};
         dataPersonalRaw.forEach(row => {
-            const telefono = row['C'];
-            if (telefono) {
-                if (row['A']) mapTelefonos[row['A'].toString().trim()] = telefono.toString().trim();
-                if (row['B']) mapTelefonos[row['B'].toString().trim()] = telefono.toString().trim();
+            const nombrePersonal = row['B']; // Solo miramos la columna B (Personal)
+            const telefono = row['C'];       // Y la columna C (Teléfonos)
+
+            // Verificamos que la celda del nombre y del teléfono no estén vacías
+            if (nombrePersonal && telefono) {
+                mapTelefonos[nombrePersonal.toString().trim()] = telefono.toString().trim();
             }
         });
 
@@ -247,38 +249,38 @@ app.post('/api/generar', (req, res) => {
 
         // Construimos el contexto que se enviará al Word
         const contexto = {
-                fecha_actual: formatFecha(data.fecha_emision),
-                nombres: nombresFormateados, // Reemplazado con nuestra nueva lógica
-                detalle_mision: data.mision,
-                destinos: destinosArray,     // Reemplazado para que sea un arreglo utilizable en tablas
-                lugar_salida: data.lugar_salida,
-                fecha_mision: formatFecha(data.fecha_mision),
-                hora_salida: formatHora(data.hora_salida),
-                placa: data.placa,
-                clase_vehiculo: data.clase_vehiculo,
-                monto: data.monto === "Ninguno" ? "" : data.monto.replace("$", ""),
-                nombre_motorista: data.motorista ? data.motorista.toUpperCase() : ""
-            };
+            fecha_actual: formatFecha(data.fecha_emision),
+            nombres: nombresFormateados, // Reemplazado con nuestra nueva lógica
+            detalle_mision: data.mision,
+            destinos: destinosArray,     // Reemplazado para que sea un arreglo utilizable en tablas
+            lugar_salida: data.lugar_salida,
+            fecha_mision: formatFecha(data.fecha_mision),
+            hora_salida: formatHora(data.hora_salida),
+            placa: data.placa,
+            clase_vehiculo: data.clase_vehiculo,
+            monto: data.monto === "Ninguno" ? "" : data.monto.replace("$", ""),
+            nombre_motorista: data.motorista ? data.motorista.toUpperCase() : ""
+        };
 
-            const content = fs.readFileSync(path.join(__dirname, 'plantilla_transporte.docx'), 'binary');
-            const zip = new PizZip(content);
-            const doc = new Docxtemplater(zip, {
-                paragraphLoop: true,
-                linebreaks: true,
-                delimiters: { start: '{{', end: '}}' }
-            });
+        const content = fs.readFileSync(path.join(__dirname, 'plantilla_transporte.docx'), 'binary');
+        const zip = new PizZip(content);
+        const doc = new Docxtemplater(zip, {
+            paragraphLoop: true,
+            linebreaks: true,
+            delimiters: { start: '{{', end: '}}' }
+        });
 
-            doc.render(contexto);
+        doc.render(contexto);
 
-            const buf = doc.getZip().generate({ type: 'nodebuffer', compression: 'DEFLATE' });
-            res.setHeader('Content-Disposition', `attachment; filename="${data.placa}-Misión Oficial - ${data.fecha_mision}.docx"`);
-            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-            res.send(buf);
-        } catch (error) {
-            console.error("Error al generar el documento:", error);
-            res.status(500).json({ error: "Error al generar el documento." });
-        }
-    });
+        const buf = doc.getZip().generate({ type: 'nodebuffer', compression: 'DEFLATE' });
+        res.setHeader('Content-Disposition', `attachment; filename="${data.placa}-Misión Oficial - ${data.fecha_mision}.docx"`);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        res.send(buf);
+    } catch (error) {
+        console.error("Error al generar el documento:", error);
+        res.status(500).json({ error: "Error al generar el documento." });
+    }
+});
 
 app.delete('/api/eliminar-ruta/:ruta', (req, res) => {
     const rutaAEliminar = decodeURIComponent(req.params.ruta);
